@@ -3,6 +3,8 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use std::collections::HashMap;
 
+use structures::{Node, Switch, Chunk};
+
 // Clap used for arguments
 use clap::{arg, command, value_parser, ArgAction, Command};
 use std::path::PathBuf;
@@ -14,8 +16,6 @@ use std::path::PathBuf;
  */
 // clap library for argument management
 // take from std::in
-
-// 
 
 use clap::Parser;
 
@@ -29,127 +29,25 @@ struct Args {
     output: String,
 }
 
-/*
-    ------------
-    Program Code
-    ------------
- */
-
-struct Nodes {
-    hostname: String,
-    uid: String,
-    portnum: i32,
-    link_speed: String,
-}
-
-impl Nodes {
-    pub fn build_node()
-}
-
-struct Switch {
-    guid: String,
-    model: String,
-    // Anything plugged in - Could be switch or node
-    //                uid    portnum
-    devices: HashMap<String, String>,
-    link_speed: String,
-}
-
-impl Switch {
-    pub fn build_switch(guid: String, model: String, devices: HashMap<String, String>) -> Switch {
-        Switch {
-            guid: extract_guid(paragraph: &str),
-            model: extract_model(paragraph: &str),
-            devices: extract_devices(paragraph: &str),
-            link_speed: extract_link_speeds(paragraph: &str),
-        }
-    }
-}
-
-fn extract_guid(paragraph: &str) {
-    // get Switch IDs
-    if paragraph.contains("switchguid") {
-        let len_farm_hostname = 16;  // We assume farm hostname only contains six chars
-        let farm_hostname_index = paragraph.find("switchguid") + 1  // Get index where 'farm' is at
-        let hostname: String = paragraph.chars().skip(farm_hostname_index + 1).take(len_farm_hostname).collect();
-        println!("SUBSTRING: {}", hostname);
-    }
-}
-
-fn extract_model(paragraph: &str) {
-    if paragraph.contains("Switch") {
-
-        while paragraph.find("#") > paragraph.find("\"") {
-            let start_index = paragraph.find("\"");
-            let end_index = paragraph.find("\"").next();
-        }
-        let len_indexes = end_index - start_index;
-
-        // .skip() means skipping TO that index
-        let hostname: String = paragraph.chars().skip(start_index).take(len_indexes).collect();
-        println!("SUBSTRING: {}", hostname);
-    }
-}
-
-fn extract_nodes(paragraph: &str) {
-    if paragraph.contains("Switch") {
-        while paragraph.find("#") > paragraph.find("\"") {
-            let start_index = paragraph.find("\"");
-            let end_index = paragraph.find("\"").next();
-        }
-        let len_indexes = end_index - start_index;
-
-        // .skip() means skipping TO that index
-        let hostname: String = paragraph.chars().skip(start_index).take(len_indexes).collect();
-        println!("SUBSTRING: {}", hostname);
-    })
-}
-
-fn extract_model(paragraph: &str) {
-    
-}
-
-fn extract_nodes(paragraph: &str) {
-    if paragraph.contains("farm") {
-        let len_farm_hostname = 6;  // We assume farm hostname only contains six chars
-        let farm_hostname_index = paragraph.find("farm");   // Get index where 'farm' is at
-        let farm_
-        let hostname: String = paragraph.chars().skip(farm_hostname_index).take(len_farm_hostname).collect();
-        paragraph.find("#");
-        paragraph.find("\"");
-        paragraph.find("\"").next();
-        println!("SUBSTRING: {}", hostname);
-    }
-}
-}
-
-struct Chunks {
-    nodes: vec<Nodes>,
-    switches: vec<Switch>,
-}
-
-trait ChunkBuilder{
-    pub fn chunkBuilder() {
-        Switch.build_switch();
-    }
-}
-
 fn main() {
     let args = Args::parse();
     println!("output: {:?}", cli.output);
 
-    for paragraph in paragraphs {
-        let
+    let file = get_paragraphs("./ibnetdiscover2023-01-02-18-29-2.txt");
+
+    for paragraph in file.clone() {
+        let Switch = build_switch(&paragraph);
+        let Node = build_node(&paragraph);
+        let Chunk = build_chunk(&paragraph);
     }
-    let paragraphs = get_paragraphs("./ibnetdiscover2023-01-02-18-29-2.txt");
-    let switches = get_switches(paragraphs.clone());    // .clone() makes a copy and follows memory safety
-    let nodes = get_nodes(paragraphs.clone());
-    // clone args to memory safe
 }
 
 /* get_switches: read from paragraph */
-fn get_switches(paragraphs: Vec<Vec<String>>) {
-    let mut my_paragraph = paragraphs.clone();
+fn get_switches(paragraph: Vec<String>) {
+    let mut my_paragraph = paragraph.clone();
+    for line in paragraph {
+        
+    }
 }
 
 /* get_paragraphs: start from read_lines and then save lines into a vector */
@@ -157,20 +55,20 @@ fn get_paragraphs(filename: &str) -> Vec<Vec<String>> {
     // File ibnetdiscover2023-01-02-18-29-2.txt must exist in the current path
     if let Ok(lines) = read_lines(filename) {
         // Consumes the iterator, returns an (Optional) String
-        Vec<Vec<String>> paragraphs;
-        Vec<String> lines;
+        Vec<Vec<String>> file;
+        Vec<String> templines;
         
         for line in lines.flatten() {
             if line.trim().is_empty() {
                 // New paragraph                                (Paragraph 1)        (Paragraph 2)
-                paragraphs.append(lines);   // Looks like: [ [line1, line2, ...], [line1, line2, ...], ... ]
-                lines.clear();
+                file.push(templines);   // File looks like: [ [line1, line2, ...], [line1, line2, ...], ... ]
+                templines.clear();
             } else {
-                lines.append(line);
+                templines.push(line);
             }
         }
     }
-    paragraphs.into();   // paragraphs is removed after this function has finished running to preserve mem
+    file.into();    // paragraph is removed after this function has finished running to preserve mem
 }
 
 // The output is wrapped in a Result to allow matching on errors.

@@ -1,3 +1,4 @@
+workspace = { members = [ "structures","verify_vectors"] }
 [package]
 name = "grep-ibnet"
 version = "0.1.0"
