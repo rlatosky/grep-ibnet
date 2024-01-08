@@ -14,7 +14,7 @@ Cargo.lock
 *.pdb
 
 *.txt
-
+*.buildconfig
 
 # Added by cargo
 
