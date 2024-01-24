@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
@@ -24,153 +25,220 @@ struct Args {
     output: String,
 }
 
-// Nodes include [H] AND [S] - anything below a Switch
+// Nodes include [H] AND [S] - anything below a MAIN Switch
+#[derive(Clone, Debug)]
 struct Node {
-    hostname: String,
+    node_type: String,
+    hostname_or_model: String,
     uid: String,
-    portnum: String,
-    link_speed: String,
+    //           portnum,          uid   link speed
+    ports: HashMap<String, HashMap<String,String>>,
 }
 
 impl Node {
-    pub fn build_node(hostname: String, uid: String, portnum: String, link_speed: String) -> Node {
+    pub fn build_node(line: &String) -> Node {
         return Node {
-            hostname: hostname,
-            uid: uid,
-            portnum: portnum,
-            link_speed: link_speed,
+            node_type: extract_node_type(line),
+            hostname_or_model: extract_node_hostname(line),
+            uid: extract_node_uid(line),
+            ports: extract_node_ports(line),
         }
     }
 }
 
+fn extract_node_type(line: &String) -> String {
+    let mut start_index = line.find("\"").unwrap_or(line.len());
+    let mut uid = line.substring(start_index+1, start_index+2);
+    if (uid == "S") {
+        return "Switch".to_string();
+    }
+    else {
+        return "Host".to_string();
+    }
+}
+
+fn extract_node_hostname(line: &String) -> String {
+    let desired_string: Vec<&str> = line.split("#").collect();
+    let start_index = desired_string[1].find("\"").unwrap_or(desired_string[1].len());
+    let end_index = desired_string[1].rfind("\"").unwrap_or(desired_string[1].len());
+    let mut hostname = desired_string[1].substring(start_index+1, end_index);
+    if hostname.contains(";") {
+        hostname = hostname.substring(hostname.find(";").unwrap_or(hostname.len())+1, end_index);
+        return hostname.to_string();
+    } else if hostname.contains(":") || hostname.contains("SW") || hostname.contains(" ") {
+        return hostname.to_string();
+    }
+    return "<None>".to_string();
+}
+
+fn extract_node_uid(line: &String) -> String {
+    let mut uids: Vec<String> = Vec::new();
+
+    let mut start_index = line.find("\"").unwrap_or(line.len());
+    let mut uid = line.substring(start_index+3, start_index+19);
+    uids.push(uid.to_string());
+
+    // start_index = line.find("(").unwrap_or(line.len());
+    // end_index = line.find(")").unwrap_or(line.len());
+    // uid = line.substring(start_index+1, end_index);
+    // uids.push(uid.to_string());
+
+    return uid.to_string();
+}
+
+fn extract_node_ports(line: &String) ->  HashMap<String, HashMap<String,String>> {
+    let mut found_uid;
+    let mut found_portnum;
+    let mut found_link_speed;
+
+    let mut start_index = line.rfind("[").unwrap_or(line.len());
+    let mut end_index = line.rfind("]").unwrap_or(line.len());
+    found_portnum = line.substring(start_index+1, end_index);
+
+    start_index = line.find("(").unwrap_or(line.len());
+    end_index = line.find(")").unwrap_or(line.len());
+    found_uid = line.substring(start_index+1, end_index);
+
+    let last_word = line.split(' ').last().unwrap();
+    found_link_speed = last_word.to_string();
+
+    let hash_map_uid_link = HashMap::from([(found_uid.to_string(), found_link_speed.to_string())]);
+    let hash_map_portnum_uid_link = HashMap::from([(found_portnum.to_string(),hash_map_uid_link)]);
+    return hash_map_portnum_uid_link;
+}
+
+#[derive(Clone, Debug)]
 struct Switch {
-    guid: String,
+    hostname: String,
+    uid: String,
     model: String,
-    devices: Vec<Node>,
-    link_speeds: Vec<String>,
+    //           portnum,          uid   link speed
+    ports: Vec< HashMap<String, HashMap<String,String>> >,
+    //link_speeds: Vec<String>,
 }
 
 impl Switch {
     pub fn build_switch(paragraph: &Vec<String>) -> Switch {
         return Switch {
-            guid: extract_switch_guid(paragraph),
+            hostname: extract_switch_hostname(paragraph),
+            uid: extract_switch_uid(paragraph),
             model: extract_switch_model(paragraph),
-            devices: extract_switch_devices(paragraph),
-            link_speeds: extract_switch_link_speeds(paragraph),
+            ports: extract_switch_devices(paragraph),
         }
     }
 
 }
 
-fn extract_switch_guid(paragraph: &Vec<String>) -> String {
+fn extract_switch_hostname(paragraph: &Vec<String>) -> String {
+    for line in paragraph {
+        if line.contains("Switch") {
+            let desired_string: Vec<&str> = line.split("#").collect();
+            let start_index = desired_string[1].find("\"").unwrap_or(desired_string[1].len());
+            let end_index = desired_string[1].rfind("\"").unwrap_or(desired_string[1].len());
+            let mut hostname = desired_string[1].substring(start_index, end_index);
+            if hostname.contains(";") {
+                hostname = hostname.substring(start_index, end_index);
+                return hostname.to_string();
+            } else if hostname.contains(":") || hostname.contains("SW") {
+                return hostname.to_string();
+            }
+        }
+    }
+    return "<None>".to_string();
+}
+
+fn extract_switch_uid(paragraph: &Vec<String>) -> String {
     let my_paragraph = paragraph.clone();
-    let mut guid = "<None>";
+    let mut uid = "<None>";
     for line in my_paragraph {
         if line.contains("switchguid") {
             let start_index = line.find("(").unwrap_or(line.len());
             let end_index = line.find(")").unwrap_or(line.len());
-            guid = line.substring(start_index, end_index);
-            println!("GUID SUBSTRING: {}", guid);
-            return guid.into();
-        } else {
-            return guid.into();
+            uid = line.substring(start_index+1, end_index);
+            println!("UID SUBSTRING: {}", uid);
+            return uid.to_string();
         }
     }
-    return guid.to_string();
+    return uid.to_string();
 }
 
 fn extract_switch_model(paragraph: &Vec<String>) -> String {
     let my_paragraph = paragraph.clone();
     let mut model = "<None>";
     for line in my_paragraph {
-        if line.contains("Switch") {
-            let mut start_index = 0;
-            let mut end_index = 0;
-            while line.find("#") > line.find("\"") {
-                start_index = line.find("\"").unwrap_or(line.len());
-                end_index = line.rfind("\"").unwrap_or(line.len());
+        if line.contains("Switch")  {
+            let desired_string: Vec<&str> = line.split("#").collect();
+            let start_index = desired_string[1].find("\"").unwrap_or(desired_string[1].len());
+            let end_index = desired_string[1].rfind("\"").unwrap_or(desired_string[1].len());
+            let model = desired_string[1].substring(start_index+1, end_index);
+            if !model.chars().any(|c| matches!(c, '0'..='9')) {
+                return model.to_string();
             }
-            model = line.clone().substring(start_index, end_index);
-            println!("MODEL SUBSTRING: {}", model);
         }
     }
     return model.to_string();
 }
 // format as a HashMap(uid, portnum)
 // collect devices as a hashmap from '[]'
-fn extract_switch_devices(paragraph: &Vec<String>) -> Vec<Node> {
-    let mut my_paragraph = paragraph.clone();
+fn extract_switch_devices(paragraph: &Vec<String>) -> Vec< HashMap<String, HashMap<String,String>> > {
     let mut found_uid;
     let mut found_portnum;
-    let mut found_hostname;
-    let mut found_link_speeds;
-    let mut found_nodes: Vec<Node> = Vec::new();
+    let mut found_link_speed;
+    let mut found_nodes = Vec::new();
 
-    for line in my_paragraph { // working with String
+    for line in paragraph { // working with String
         let mut start_index: usize;
         let mut end_index: usize;
         let device_code: String = line.substring(line.find("\"").unwrap_or(line.len()),line.find("\"").unwrap_or(line.len())+1).to_string();
         let last_word = line.split(' ').last().unwrap();
         if line.contains("[") {
-            start_index = line.find("(").unwrap_or(line.len());
-            end_index = line.find(")").unwrap_or(line.len());
-            found_uid = line.substring(start_index, end_index);
+            start_index = line.find("\"").unwrap_or(line.len());
+            found_uid = line.substring(start_index+3, start_index+19);
+
+            // start_index = line.find("(").unwrap_or(line.len());
+            // end_index = line.find(")").unwrap_or(line.len());
+            // found_uid = line.substring(start_index+1, end_index);
 
             start_index = line.find("[").unwrap_or(line.len());
             end_index = line.find("]").unwrap_or(line.len());
 
-            found_portnum = line.trim().substring(start_index, end_index);
-            while line.contains("#") < line.contains("\"") {
-                start_index = line.find("\"").unwrap_or(line.len());
-                end_index = line.rfind("\"").unwrap_or(line.len());
-            }
-            found_hostname = line.substring(start_index, end_index);
-            found_link_speeds = last_word.to_string();
+            found_portnum = line.trim().substring(start_index+1, end_index);
+            found_link_speed = last_word.to_string();
 
-            found_nodes.push(Node::build_node(found_hostname.to_string(), found_portnum.to_string(),
-                found_uid.to_string(), found_link_speeds.to_string()));
+            let hash_map_uid_portnum = HashMap::from([(found_uid.to_string(), found_link_speed.to_string())]);
+            let hash_map_portnum_uid_link = HashMap::from([(found_portnum.to_string(),hash_map_uid_portnum)]);
+            found_nodes.push(hash_map_portnum_uid_link);
         }
     }
+
     return found_nodes;
+    //return HashMap::from([("<None>".to_string(), HashMap::from([("<None>".to_string(), "<None>".to_string())]))]);
 }
 
-fn extract_switch_link_speeds(paragraph: &Vec<String>) -> Vec<String> {
-    let mut my_paragraph = paragraph.clone();
-    let mut link_speeds: Vec<String> = Vec::new();
-
-    for line in my_paragraph {
-        let device_code: String = line.substring(line.find("\"").unwrap_or(line.len()),line.find("\"").unwrap_or(line.len())+1).to_string();
-        if line.contains("[") && device_code == "S" {
-            let last_word = line.split(' ').last().unwrap();
-            link_speeds.push(last_word.to_string());
-        }
-    }
-    return link_speeds;
-}
-
-// struct Chunk {
-//     nodes: vec!<vec!<Nodes>>,
-//     switches: vec!<Switch>,
-// }
-
-// impl Chunk {
-//     pub fn chunk_builder(paragraph: &Vec<String>) {
-//         Chunk {
-//             nodes: extract(paragraph),
-//             switches: get_total_switches(paragraph),
-//         }
-//     }
-// }
+//////////////////////////////////////////////////////
 
 fn main() {
-    let args = Args::parse();
-    println!("output: {:?}", args.output);
-
     let file = get_paragraphs("./ibnetdiscover2023-01-02-18-29-2.txt");
+    let mut switches: Vec<Switch> = Vec::new();
+    let mut nodes: Vec<Node> = Vec::new();
 
-    for &paragraph in &file.clone() {
-        let Switch = Switch::build_switch(&paragraph);
-        //let Chunk = Chunk::build_chunk(&paragraph);
+    for paragraph in &file.clone() {
+        println!("=============================================================");
+        println!("=============================================================");
+        println!("=============================================================");
+        println!("Paragraph: {:#?}\n", paragraph);
+
+        let switch = Switch::build_switch(&paragraph);
+        println!("{:#?}", switch);
+        switches.push(switch);
+        // Any nodes underneath a root switch:
+        for line in paragraph {
+            if line.contains("[") {
+                let node = Node::build_node(&line);
+                println!("{:#?}", node);
+                nodes.push(node);
+            }
+        }
     }
 }
 
@@ -185,7 +253,7 @@ fn get_paragraphs(filename: &str) -> Vec<Vec<String>> {
         for line in lines.flatten() {
             if line.trim().is_empty() {
                 // New paragraph                                (Paragraph 1)        (Paragraph 2)
-                txtfile.push(templines);   // File looks like: [ [line1, line2, ...], [line1, line2, ...], ... ]
+                txtfile.push(templines.clone());   // File looks like: [ [line1, line2, ...], [line1, line2, ...], ... ]
                 templines.clear();
             } else {
                 templines.push(line);
