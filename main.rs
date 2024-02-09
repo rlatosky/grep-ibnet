@@ -47,9 +47,9 @@ impl Node {
 }
 
 fn extract_node_type(line: &String) -> String {
-    let mut start_index = line.find("\"").unwrap_or(line.len());
-    let mut uid = line.substring(start_index+1, start_index+2);
-    if (uid == "S") {
+    let start_index = line.find("\"").unwrap_or(line.len());
+    let uid = line.substring(start_index+1, start_index+2);
+    if uid == "S" {
         return "Switch".to_string();
     }
     else {
@@ -74,8 +74,8 @@ fn extract_node_hostname(line: &String) -> String {
 fn extract_node_uid(line: &String) -> String {
     let mut uids: Vec<String> = Vec::new();
 
-    let mut start_index = line.find("\"").unwrap_or(line.len());
-    let mut uid = line.substring(start_index+3, start_index+19);
+    let start_index = line.find("\"").unwrap_or(line.len());
+    let uid = line.substring(start_index+3, start_index+19);
     uids.push(uid.to_string());
 
     // start_index = line.find("(").unwrap_or(line.len());
@@ -87,9 +87,9 @@ fn extract_node_uid(line: &String) -> String {
 }
 
 fn extract_node_ports(line: &String) ->  HashMap<String, HashMap<String,String>> {
-    let mut found_uid;
-    let mut found_portnum;
-    let mut found_link_speed;
+    let found_uid;
+    let found_portnum;
+    let found_link_speed;
 
     let mut start_index = line.rfind("[").unwrap_or(line.len());
     let mut end_index = line.rfind("]").unwrap_or(line.len());
@@ -164,7 +164,7 @@ fn extract_switch_uid(paragraph: &Vec<String>) -> String {
 
 fn extract_switch_model(paragraph: &Vec<String>) -> String {
     let my_paragraph = paragraph.clone();
-    let mut model = "<None>";
+    let model = "<None>";
     for line in my_paragraph {
         if line.contains("Switch")  {
             let desired_string: Vec<&str> = line.split("#").collect();
@@ -188,8 +188,7 @@ fn extract_switch_devices(paragraph: &Vec<String>) -> Vec< HashMap<String, HashM
 
     for line in paragraph { // working with String
         let mut start_index: usize;
-        let mut end_index: usize;
-        let device_code: String = line.substring(line.find("\"").unwrap_or(line.len()),line.find("\"").unwrap_or(line.len())+1).to_string();
+        let end_index: usize;
         let last_word = line.split(' ').last().unwrap();
         if line.contains("[") {
             start_index = line.find("\"").unwrap_or(line.len());
