@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.4.13", features = ["derive"] }
+serde_json = "1.0.114"
 substring = "1.4.5"
 
 [[bin]]

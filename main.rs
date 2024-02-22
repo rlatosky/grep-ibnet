@@ -1,6 +1,7 @@
 mod extract_ibnet;
 use extract_ibnet::*;
 
+
 // Clap used for arguments
 /*
     Some Information:
@@ -28,22 +29,23 @@ struct Cli {
 fn main() {
     let cli = Cli::parse(); // Parse command-line arguments
 
-    if let Some(config_path) = cli.ibnet.as_deref() {
-        println!("Value for config: {}", config_path);
-        let file = get_paragraphs(config_path);
+    if let Some(file_path) = cli.ibnet.as_deref() {
+        println!("Value for config: {}", file_path);
+        let file = get_paragraphs(file_path);
 
         let mut switches: Vec<Switch> = Vec::new();
 		let mut nodes: Vec<Node> = Vec::new();
 
 		for paragraph in &file.clone() {
-		    println!("=============================================================");
-		    println!("=============================================================");
-		    println!("=============================================================");
-		    println!("Paragraph: {:#?}\n", paragraph);
+		    // println!("=============================================================");
+		    // println!("=============================================================");
+		    // println!("=============================================================");
+		    // println!("Paragraph: {:#?}\n", paragraph);
 
 		    let switch = Switch::build_switch(&paragraph);
 		    println!("{:#?}", switch);
 		    switches.push(switch);
+
 		    // Any nodes underneath a root switch:
 		    for line in paragraph {
 		        if line.contains("[") {
